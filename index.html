@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chamada de pacientes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+/* ===================== CONFIGURAÇÃO VISUAL ===================== */
+:root{--brand:#0B5E6E;--tv:#0B2E3A;--acc:#5FD4C4;--bg:#F3F6F7;--ink:#142229;--mut:#4A5B62;--line:#DCE4E7}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Atkinson Hyperlegible',Arial,sans-serif}
+button,input,select{font:inherit}
+.hide{display:none!important}
+/* login */
+#login{min-height:100vh;display:grid;place-items:center;padding:20px}
+#login form{background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px;width:min(380px,100%);display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--mut)}
+input,select{font-size:16px;color:var(--ink);height:46px;padding:0 12px;border:1px solid #B9C7CC;border-radius:8px;background:#fff}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+.btn{height:50px;border:0;border-radius:10px;background:var(--brand);color:#fff;font-size:17px;font-weight:700;padding:0 22px;cursor:pointer}
+.btn.sec{background:#fff;color:var(--brand);border:1px solid var(--brand);height:42px;font-size:15px;font-weight:400;padding:0 14px}
+.btn.sm{height:42px;font-size:15px;padding:0 16px}
+.err{color:#B3261E;font-size:14px;min-height:20px}
+/* app */
+#app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+nav{background:var(--brand);color:#fff;display:flex;flex-direction:column;gap:8px;padding:24px 16px}
+nav .t{font-size:19px;font-weight:700;padding:0 8px 18px}
+nav a{display:flex;align-items:center;gap:12px;height:48px;padding:0 14px;border-radius:10px;color:#D6ECEF;text-decoration:none}
+nav a.on{background:#fff;color:var(--brand);font-weight:700}
+nav .foot{margin-top:auto;font-size:13px;color:#B9DADF;padding:0 8px;display:flex;flex-direction:column;gap:8px}
+nav .foot button{background:none;border:1px solid #6FA9B3;color:#fff;border-radius:8px;height:38px;cursor:pointer}
+main{padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+h1{margin:0;font-size:28px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px}
+.grid2{display:grid;grid-template-columns:360px minmax(0,1fr);gap:24px;align-items:start}
+.form{display:flex;flex-direction:column;gap:16px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;color:var(--mut);font-size:13px;font-weight:400;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:11px 8px;border-top:1px solid #EEF2F3;vertical-align:middle}
+.chip{padding:4px 10px;border-radius:99px;font-size:13px;white-space:nowrap}
+.aguardando{background:#FFF1D6;color:#7A4B00}.chamado{background:#DDF3EF;color:var(--brand)}
+.atendido{background:#E9ECEE;color:var(--mut)}.cancelado{background:#FBE3E1;color:#8C1D18}
+.empty{color:var(--mut);padding:18px 0}
+.atual{border:2px solid var(--brand)}
+.item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid #EEF2F3}
+.item b{font-size:18px}.sub{font-size:14px;color:var(--mut)}
+.link{background:none;border:0;color:#8C1D18;cursor:pointer;font-size:14px;text-decoration:underline}
+/* TV */
+.tv{background:var(--tv);color:#fff;border-radius:14px;display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;min-height:470px}
+.tv .top{display:flex;justify-content:space-between;padding:14px 28px;border-bottom:1px solid rgba(255,255,255,.12);font-weight:700}
+.tv .now{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;text-align:center;padding:24px}
+.tv .lbl{color:var(--acc);font-weight:700;font-size:clamp(16px,2.2vw,30px)}
+.tv .nome{font-size:clamp(34px,6.5vw,110px);line-height:1.05;font-weight:700}
+.tv .sala{background:var(--acc);color:var(--tv);border-radius:16px;padding:.3em .9em;font-size:clamp(24px,4.2vw,68px);font-weight:700}
+.tv .hist{background:rgba(0,0,0,.22);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:16px 28px}
+.tv .hist b{display:block;font-size:clamp(15px,1.8vw,30px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv .hist span{font-size:clamp(12px,1.3vw,22px);color:#B9CBD3}
+.tv.flash .nome{animation:fl 1s ease 3}
+@keyframes fl{50%{opacity:.25}}
+body.full nav,body.full .notv{display:none!important}
+body.full #app{display:block}body.full main{padding:0}
+body.full .tv{border-radius:0;min-height:100vh}
+@media(max-width:820px){#app{grid-template-columns:1fr}nav{flex-direction:row;flex-wrap:wrap;padding:12px}nav .t,nav .foot{display:none}.grid2{grid-template-columns:1fr}main{padding:20px 16px}}
+@media(prefers-reduced-motion:reduce){.tv.flash .nome{animation:none}}
+</style>
+</head>
+<body>
+<!-- ===================== LOGIN ===================== -->
+<div id="login" class="hide">
+  <form id="fLogin">
+    <h1 style="font-size:24px">Chamada de pacientes</h1>
+    <label>E-mail<input id="lEmail" type="email" required autocomplete="username"></label>
+    <label>Senha<input id="lSenha" type="password" required autocomplete="current-password"></label>
+    <button class="btn" type="submit">Entrar</button>
+    <div class="err" id="lErr"></div>
+  </form>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app" class="hide">
+  <nav>
+    <div class="t">Chamada de pacientes</div>
+    <a href="#chamamento" data-tab="chamamento">Tela de chamamento</a>
+    <a href="#recepcao" data-tab="recepcao">Recepção</a>
+    <a href="#medico" data-tab="medico">Médico / Sala</a>
+    <div class="foot"><span id="hoje"></span><button id="sair" type="button">Sair</button></div>
+  </nav>
+  <main>
+    <!-- CHAMAMENTO -->
+    <section id="tab-chamamento" class="tab">
+      <div class="row notv"><h1>Tela de chamamento</h1>
+        <button class="btn" id="btnFull" type="button">Abrir em tela cheia na TV</button></div>
+      <div class="sub notv">Clique em "tela cheia" na TV da recepção. Para sair da tela cheia, aperte Esc.</div>
+      <div class="tv" id="tv">
+        <div class="top"><span id="tvUnidade"></span><span id="tvHora"></span></div>
+        <div class="now"><div class="lbl" id="tvLbl">Aguardando chamada</div><div class="nome" id="tvNome"></div><div class="sala hide" id="tvSala"></div></div>
+        <div class="hist" id="tvHist"></div>
+      </div>
+    </section>
+
+    <!-- RECEPÇÃO -->
+    <section id="tab-recepcao" class="tab hide">
+      <h1>Recepção</h1>
+      <div class="grid2">
+        <form class="card form" id="fCad">
+          <div style="font-size:20px;font-weight:700">Cadastrar paciente</div>
+          <label>Nome completo<input id="cNome" required maxlength="80"></label>
+          <label>Motivo<select id="cMotivo"></select></label>
+          <label>Encaminhar para<select id="cSala"></select></label>
+          <button class="btn" type="submit">Enviar para a fila</button>
+          <div class="err" id="cErr"></div>
+        </form>
+        <div class="card">
+          <div class="row" style="padding-bottom:8px"><div style="font-size:20px;font-weight:700">Fila de hoje</div>
+            <div class="row" style="gap:14px"><span class="sub" id="contagem"></span><button class="btn sec" id="btnCsv" type="button">Baixar planilha</button></div></div>
+          <div style="overflow-x:auto"><table><thead><tr><th>Chegada</th><th>Paciente</th><th>Motivo</th><th>Sala</th><th>Situação</th><th></th></tr></thead><tbody id="tbFila"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÉDICO -->
+    <section id="tab-medico" class="tab hide">
+      <div class="row"><h1>Médico / Sala</h1>
+        <label style="flex-direction:row;align-items:center;gap:10px">Minha sala<select id="mSala"></select></label></div>
+      <div class="card atual" id="mAtual"></div>
+      <div class="card"><div class="row" style="padding-bottom:6px"><div style="font-size:20px;font-weight:700">Aguardando para esta sala</div><span class="sub" id="mCont"></span></div>
+        <div id="mFila"></div></div>
+    </section>
+  </main>
+</div>
+
+<script>
+{
+/* ===================== CONFIGURAÇÃO (edite aqui) ===================== */
+const SUPABASE_URL = 'https://aapqbqxohprtnnwsosgw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_M7crVGSqhQ-U2dJTlx5rIg_IoqcdY2u';
+const UNIDADE = 'Nome da Unidade de Saúde';
+const SALAS = ['Sala 1 – Enfermagem', 'Sala 2 – Clínica Médica', 'Sala 3 – Vacina'];
+const MOTIVOS = ['Consulta médica', 'Consulta de enfermagem', 'Curativo', 'Vacina', 'Retorno'];
+/* ===================================================================== */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hm = t => t ? new Date(t).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '';
+const opts = arr => arr.map(v => `<option>${esc(v)}</option>`).join('');
+const NOMES = {aguardando:'Aguardando', chamado:'Chamado', atendido:'Atendido', cancelado:'Removido'};
+let dados = [], ultimoChamado = null, canal = null;
+
+$('cMotivo').innerHTML = opts(MOTIVOS);
+$('cSala').innerHTML = opts(SALAS);
+$('mSala').innerHTML = opts(SALAS);
+$('tvUnidade').textContent = UNIDADE;
+$('hoje').textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'2-digit', year:'numeric'});
+try { const s = localStorage.getItem('minhaSala'); if (SALAS.includes(s)) $('mSala').value = s; } catch(e) {}
+setInterval(() => $('tvHora').textContent = hm(new Date()), 1000);
+
+/* ---------- abas ---------- */
+function abrirAba() {
+  const t = ['chamamento','recepcao','medico'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'recepcao';
+  document.querySelectorAll('.tab').forEach(s => s.classList.toggle('hide', s.id !== 'tab-' + t));
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.tab === t));
+}
+window.addEventListener('hashchange', abrirAba);
+
+/* ---------- login ---------- */
+async function iniciar() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) entrar(); else $('login').classList.remove('hide');
+}
+$('fLogin').addEventListener('submit', async e => {
+  e.preventDefault(); $('lErr').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email: $('lEmail').value.trim(), password: $('lSenha').value });
+  if (error) $('lErr').textContent = 'E-mail ou senha incorretos.'; else entrar();
+});
+$('sair').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+function entrar() {
+  $('login').classList.add('hide'); $('app').classList.remove('hide');
+  abrirAba(); carregar();
+  canal = sb.channel('fila').on('postgres_changes', { event: '*', schema: 'public', table: 'atendimentos' }, carregar).subscribe();
+  setInterval(carregar, 30000); // garantia caso a conexão caia
+}
+
+/* ---------- dados ---------- */
+async function carregar() {
+  const ini = new Date(); ini.setHours(0,0,0,0);
+  const { data, error } = await sb.from('atendimentos').select('*').gte('chegada', ini.toISOString()).order('chegada');
+  if (error) { console.error(error); return; }
+  dados = data; desenhar();
+}
+const atualiza = (id, campos) => sb.from('atendimentos').update(campos).eq('id', id);
+
+/* ---------- recepção ---------- */
+$('fCad').addEventListener('submit', async e => {
+  e.preventDefault(); $('cErr').textContent = '';
+  const nome = $('cNome').value.trim().replace(/\s+/g, ' ');
+  if (!nome) return;
+  const { error } = await sb.from('atendimentos').insert({ nome, motivo: $('cMotivo').value, sala: $('cSala').value });
+  if (error) { $('cErr').textContent = 'Não foi possível salvar. Verifique a internet.'; return; }
+  $('cNome').value = ''; $('cNome').focus(); carregar();
+});
+$('btnCsv').addEventListener('click', () => {
+  const linhas = [['Data','Chegada','Paciente','Motivo','Sala','Situação','Chamado','Finalizado']]
+    .concat(dados.map(d => [new Date(d.chegada).toLocaleDateString('pt-BR'), hm(d.chegada), d.nome, d.motivo, d.sala, NOMES[d.status], hm(d.chamado_em), hm(d.finalizado_em)]));
+  const csv = '﻿' + linhas.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'atendimentos-' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+});
+
+/* ---------- médico ---------- */
+$('mSala').addEventListener('change', () => { try { localStorage.setItem('minhaSala', $('mSala').value); } catch(e) {} desenhar(); });
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-acao]'); if (!b) return;
+  const id = +b.dataset.id, agora = new Date().toISOString(), acao = b.dataset.acao;
+  b.disabled = true;
+  if (acao === 'chamar') {
+    const sala = $('mSala').value;
+    for (const d of dados.filter(x => x.status === 'chamado' && x.sala === sala)) await atualiza(d.id, { status: 'atendido', finalizado_em: agora });
+    await atualiza(id, { status: 'chamado', chamado_em: agora });
+  }
+  if (acao === 'rechamar') await atualiza(id, { chamado_em: agora });
+  if (acao === 'finalizar') await atualiza(id, { status: 'atendido', finalizado_em: agora });
+  if (acao === 'remover') await atualiza(id, { status: 'cancelado' });
+  carregar();
+});
+
+/* ---------- desenho ---------- */
+function desenhar() {
+  // recepção
+  const ag = dados.filter(d => d.status === 'aguardando').length, at = dados.filter(d => d.status === 'atendido').length;
+  $('contagem').textContent = `${ag} aguardando · ${at} atendidos`;
+  $('tbFila').innerHTML = dados.length ? [...dados].reverse().map(d => `<tr>
+    <td>${hm(d.chegada)}</td><td><b>${esc(d.nome)}</b></td><td>${esc(d.motivo)}</td><td>${esc(d.sala)}</td>
+    <td><span class="chip ${d.status}">${NOMES[d.status]}${d.status === 'chamado' ? ' ' + hm(d.chamado_em) : ''}</span></td>
+    <td>${d.status === 'aguardando' ? `<button class="link" data-acao="remover" data-id="${d.id}">Remover</button>` : ''}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">Nenhum paciente cadastrado hoje.</td></tr>';
+
+  // médico
+  const sala = $('mSala').value;
+  const atual = dados.filter(d => d.status === 'chamado' && d.sala === sala).sort((a,b) => b.chamado_em.localeCompare(a.chamado_em))[0];
+  $('mAtual').innerHTML = atual ? `<div class="row"><div><div class="sub">Em atendimento · chamado às ${hm(atual.chamado_em)}</div>
+      <div style="font-size:28px;font-weight:700">${esc(atual.nome)}</div><div class="sub">${esc(atual.motivo)}</div></div>
+      <div class="row" style="gap:12px"><button class="btn sec" data-acao="rechamar" data-id="${atual.id}">Rechamar</button>
+      <button class="btn sm" data-acao="finalizar" data-id="${atual.id}">Finalizar atendimento</button></div></div>`
+    : '<div class="sub">Nenhum paciente em atendimento. Clique em "Chamar" na lista abaixo.</div>';
+  const fila = dados.filter(d => d.status === 'aguardando' && d.sala === sala);
+  $('mCont').textContent = fila.length + ' na fila';
+  $('mFila').innerHTML = fila.length ? fila.map(d => `<div class="item"><div><b>${esc(d.nome)}</b><div class="sub">${esc(d.motivo)} · chegou ${hm(d.chegada)}</div></div>
+      <button class="btn sm" data-acao="chamar" data-id="${d.id}">Chamar</button></div>`).join('')
+    : '<div class="empty">Ninguém aguardando para esta sala.</div>';
+
+  // TV
+  const chamados = dados.filter(d => d.chamado_em).sort((a,b) => b.chamado_em.localeCompare(a.chamado_em));
+  const c = chamados[0];
+  if (c) {
+    $('tvLbl').textContent = 'Chamando agora'; $('tvNome').textContent = c.nome;
+    $('tvSala').textContent = c.sala; $('tvSala').classList.remove('hide');
+    const chave = c.id + '|' + c.chamado_em;
+    if (ultimoChamado && ultimoChamado !== chave) alertar();
+    ultimoChamado = chave;
+  }
+  $('tvHist').innerHTML = chamados.slice(1, 4).map(d => `<div><b>${esc(d.nome)}</b><span>${esc(d.sala)} · ${hm(d.chamado_em)}</span></div>`).join('');
+}
+
+/* ---------- som e tela cheia ---------- */
+let ac = null;
+function alertar() {
+  const tv = $('tv'); tv.classList.remove('flash'); void tv.offsetWidth; tv.classList.add('flash');
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    [0, .35].forEach((t, i) => { const o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.value = i ? 660 : 880; o.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(.0001, ac.currentTime + t); g.gain.exponentialRampToValueAtTime(.4, ac.currentTime + t + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + t + .3); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + .32); });
+  } catch(e) {}
+}
+$('btnFull').addEventListener('click', async () => {
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch(e) {}
+  document.body.classList.add('full');
+  try { await document.documentElement.requestFullscreen(); } catch(e) {}
+});
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('full'); });
+
+iniciar();
+}
+</script>
+</body>
+</html>
